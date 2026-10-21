@@ -15,6 +15,20 @@ struct ProvisioningStatusEvaluator: ProvisioningStatusEvaluating {
     }
 
     func evaluate(lastDigits: [String], requiresAuthentication: Bool) -> ProvisioningAvailability {
+        // An empty string matches no pass and would wrongly report a card as addable.
+        // A duplicate would ask PassKit about the same card again. Order is kept.
+        var seenDigits = Set<String>()
+        let issuerDigits = lastDigits.filter { !$0.isEmpty && seenDigits.insert($0).inserted }
+
+        // Nothing to compare, so Wallet is not read.
+        guard !issuerDigits.isEmpty else {
+            return ProvisioningAvailability(
+                passEntriesAvailable: false,
+                remotePassEntriesAvailable: false,
+                requiresAuthentication: requiresAuthentication
+            )
+        }
+
         // Passes are read once and indexed by suffix, so each lookup is O(1) on average.
         // Total O(n + m) for n passes and m lastDigits, instead of O(n × m) nested loops.
         // A deactivated pass counts as absent, so it is dropped before matching.
@@ -27,7 +41,7 @@ struct ProvisioningStatusEvaluator: ProvisioningStatusEvaluating {
         var passEntriesAvailable = false
         var remotePassEntriesAvailable = false
 
-        for digits in lastDigits {
+        for digits in issuerDigits {
             if let matchingPasses = activePassesBySuffix[digits] {
                 // Each check goes through PassKit, so skip it once the Watch answer is known.
                 if !remotePassEntriesAvailable {

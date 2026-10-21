@@ -107,6 +107,22 @@ struct ProvisioningStatusEvaluatorTests {
             lastDigits: [" 1234"],
             expectedOnDevice: true,
             expectedOnWatch: false
+        ),
+        Scenario(
+            testDescription: "Empty lastDigits entry is not reported as an addable card",
+            passes: [],
+            watchEligibleIdentifiers: [],
+            lastDigits: [""],
+            expectedOnDevice: false,
+            expectedOnWatch: false
+        ),
+        Scenario(
+            testDescription: "Empty lastDigits entry is ignored next to a real card",
+            passes: [.fixture(id: "id-A", suffix: "1234")],
+            watchEligibleIdentifiers: [],
+            lastDigits: ["", "1234"],
+            expectedOnDevice: false,
+            expectedOnWatch: false
         )
     ]
 
@@ -180,6 +196,28 @@ struct ProvisioningStatusEvaluatorTests {
         _ = sut.evaluate(lastDigits: ["1111", "2222", "3333"], requiresAuthentication: false)
 
         #expect(passProvider.callCount == 1)
+    }
+
+    @Test func walletIsNotReadWithoutLastDigits() {
+        let (sut, passProvider, _) = makeSUT(
+            passes: [.fixture(id: "id-A", suffix: "1234")],
+            watchEligibleIdentifiers: []
+        )
+
+        _ = sut.evaluate(lastDigits: [], requiresAuthentication: false)
+
+        #expect(passProvider.callCount == 0)
+    }
+
+    @Test func duplicateLastDigitsAreCheckedOnce() {
+        let (sut, _, watchChecker) = makeSUT(
+            passes: [.fixture(id: "id-A", suffix: "1234")],
+            watchEligibleIdentifiers: []
+        )
+
+        _ = sut.evaluate(lastDigits: ["1234", "1234"], requiresAuthentication: false)
+
+        #expect(watchChecker.requestedIdentifiers == ["id-A"])
     }
 
     private func makeSUT(
