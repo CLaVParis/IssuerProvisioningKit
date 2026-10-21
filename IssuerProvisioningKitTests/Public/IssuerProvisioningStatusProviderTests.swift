@@ -68,6 +68,31 @@ struct IssuerProvisioningStatusProviderTests {
         #expect(received?.requiresAuthentication == false)
     }
 
+    /// The only test that goes through the real `PKPassLibrary`.
+    /// Wallet content depends on the machine, so only the call itself is checked.
+    @Test func answersWithRealPassLibrary() async {
+        let sut = IssuerProvisioningStatusProvider(lastDigits: ["1234"], requiresAuthentication: true)
+
+        await confirmation(expectedCount: 1) { completionCalled in
+            sut.status { status in
+                #expect(status.requiresAuthentication)
+                completionCalled()
+            }
+        }
+    }
+
+    /// Wallet may ask from several threads at once.
+    @Test func answersConcurrentCalls() async {
+        // Every stored property is a constant, so sharing it across threads is safe.
+        nonisolated(unsafe) let sut = IssuerProvisioningStatusProvider(lastDigits: ["1234"], requiresAuthentication: false)
+
+        await confirmation(expectedCount: 100) { completionCalled in
+            DispatchQueue.concurrentPerform(iterations: 100) { _ in
+                sut.status { _ in completionCalled() }
+            }
+        }
+    }
+
     private func makeSUT(
         lastDigits: [String] = ["1234"],
         requiresAuthentication: Bool = false,

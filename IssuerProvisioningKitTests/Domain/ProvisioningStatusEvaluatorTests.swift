@@ -123,6 +123,42 @@ struct ProvisioningStatusEvaluatorTests {
             lastDigits: ["", "1234"],
             expectedOnDevice: false,
             expectedOnWatch: false
+        ),
+        Scenario(
+            testDescription: "Leading zero is kept, so 0123 matches",
+            passes: [.fixture(id: "id-A", suffix: "0123")],
+            watchEligibleIdentifiers: [],
+            lastDigits: ["0123"],
+            expectedOnDevice: false,
+            expectedOnWatch: false
+        ),
+        Scenario(
+            testDescription: "Shorter lastDigits do not match a longer suffix",
+            passes: [.fixture(id: "id-A", suffix: "1234")],
+            watchEligibleIdentifiers: [],
+            lastDigits: ["234"],
+            expectedOnDevice: true,
+            expectedOnWatch: false
+        ),
+        // Known limit of suffix matching, see Open Discussion in the README.
+        Scenario(
+            testDescription: "Two issuer cards sharing a suffix both match the one pass in Wallet",
+            passes: [.fixture(id: "id-credit", suffix: "1234")],
+            watchEligibleIdentifiers: [],
+            lastDigits: ["1234", "1234"],
+            expectedOnDevice: false,
+            expectedOnWatch: false
+        ),
+        Scenario(
+            testDescription: "Reissued card: only the deactivated old pass is addable to Watch",
+            passes: [
+                .fixture(id: "id-old", suffix: "1234", isDeactivated: true),
+                .fixture(id: "id-new", suffix: "1234")
+            ],
+            watchEligibleIdentifiers: ["id-old"],
+            lastDigits: ["1234"],
+            expectedOnDevice: false,
+            expectedOnWatch: false
         )
     ]
 
@@ -218,6 +254,31 @@ struct ProvisioningStatusEvaluatorTests {
         _ = sut.evaluate(lastDigits: ["1234", "1234"], requiresAuthentication: false)
 
         #expect(watchChecker.requestedIdentifiers == ["id-A"])
+    }
+
+    /// The early exit must not let the order of `lastDigits` change the answer.
+    @Test(arguments: [["1234", "5678"], ["5678", "1234"]])
+    func resultDoesNotDependOnOrder(_ lastDigits: [String]) {
+        let (sut, _, _) = makeSUT(
+            passes: [.fixture(id: "id-A", suffix: "1234")],
+            watchEligibleIdentifiers: ["id-A"]
+        )
+
+        let result = sut.evaluate(lastDigits: lastDigits, requiresAuthentication: false)
+
+        #expect(result.passEntriesAvailable)
+        #expect(result.remotePassEntriesAvailable)
+    }
+
+    @Test func walletIsReadAgainOnEveryCall() {
+        let (sut, passProvider, _) = makeSUT(passes: [], watchEligibleIdentifiers: [])
+        let before = sut.evaluate(lastDigits: ["1234"], requiresAuthentication: false)
+
+        passProvider.passes = [.fixture(id: "id-A", suffix: "1234")]
+        let after = sut.evaluate(lastDigits: ["1234"], requiresAuthentication: false)
+
+        #expect(before.passEntriesAvailable)
+        #expect(!after.passEntriesAvailable)
     }
 
     private func makeSUT(
