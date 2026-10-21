@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IssuerProvisioningKit – Architecture</title>
+<style>
+    :root {
+        --text: #1f2328;
+        --muted: #59636e;
+        --border: #d1d9e0;
+        --code-bg: #f6f8fa;
+        --public: #ede7f6;
+        --domain: #e8f5e9;
+        --infra: #e3f2fd;
+        --passkit: #f2f2f2;
+    }
+    body {
+        font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+        color: var(--text);
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 32px 24px 80px;
+    }
+    h1 { border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    h2 { border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-top: 48px; }
+    h3 { margin-top: 28px; }
+    code { font: 0.9em SFMono-Regular, Menlo, Consolas, monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+    pre { background: var(--code-bg); padding: 16px; border-radius: 6px; overflow-x: auto; line-height: 1.45; }
+    pre code { background: none; padding: 0; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 0.95em; }
+    th, td { border: 1px solid var(--border); padding: 6px 12px; text-align: left; vertical-align: top; }
+    th { background: var(--code-bg); }
+    nav ol { padding-left: 20px; }
+    .muted { color: var(--muted); }
+
+    /* Diagrams */
+    .diagram { border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .layer { border-radius: 6px; padding: 10px 14px 14px; margin: 4px 0; }
+    .layer > .name { font-size: 0.8em; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    .public { background: var(--public); }
+    .domain { background: var(--domain); }
+    .infra { background: var(--infra); }
+    .passkit { background: var(--passkit); }
+    .row { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+    .box { background: #fff; border: 1px solid #8c959f; border-radius: 6px; padding: 6px 12px; font: 0.88em SFMono-Regular, Menlo, Consolas, monospace; text-align: center; }
+    .protocol { border-style: dashed; font-style: italic; }
+    .arrow { text-align: center; color: var(--muted); font-size: 0.85em; margin: 4px 0; }
+    .legend { font-size: 0.85em; color: var(--muted); margin-top: 10px; }
+
+    .flow { display: flex; flex-direction: column; align-items: stretch; }
+    .step { display: flex; gap: 12px; align-items: baseline; background: #fff; border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; }
+    .step .num { font-weight: 600; color: var(--muted); min-width: 1.5em; }
+    .step .who { font: 0.85em SFMono-Regular, Menlo, Consolas, monospace; background: var(--code-bg); padding: 1px 6px; border-radius: 4px; white-space: nowrap; }
+    .loop { border: 1px dashed #8c959f; border-radius: 6px; padding: 8px 12px 12px; }
+    .loop > .name { font-size: 0.85em; color: var(--muted); margin-bottom: 6px; }
+
+    .device { border: 2px solid #8c959f; border-radius: 14px; padding: 12px 16px 16px; }
+    .device > .name, .container > .name { font-weight: 600; margin-bottom: 8px; }
+    .container { border: 1px solid #8c959f; border-radius: 8px; padding: 8px 12px 12px; background: #fff; }
+    .container .container { background: var(--code-bg); }
+</style>
+</head>
+<body>
+
+<h1>IssuerProvisioningKit – Architecture</h1>
+
+<p>
+    IssuerProvisioningKit answers one question for an issuer's Wallet extension:
+    which of the issuer's cards can still be added to this iPhone, and to the paired Apple Watch.
+</p>
+<p>
+    This document follows the
+    <a href="https://en.wikipedia.org/wiki/4%2B1_architectural_view_model">4+1 view model</a>:
+    the logical, process, development and physical views, tied together by scenarios.
+</p>
+
+<nav>
+    <ol>
+        <li><a href="#logical">Logical View</a></li>
+        <li><a href="#process">Process View</a></li>
+        <li><a href="#development">Development View</a></li>
+        <li><a href="#physical">Physical View</a></li>
+        <li><a href="#scenarios">Scenarios (+1)</a></li>
+    </ol>
+</nav>
+
+<!-- ============================================================ -->
+<h2 id="logical">1. Logical View</h2>
+
+<p>The framework is split into three layers. Dependencies only point inwards, towards the Domain.</p>
+
+<div class="diagram">
+    <div class="layer public">
+        <div class="name">Public</div>
+        <div class="row"><div class="box">IssuerProvisioningStatusProvider</div></div>
+    </div>
+    <div class="arrow">↓ depends on <code>ProvisioningStatusEvaluating</code> and <code>PassKitStatusMapper</code></div>
+
+    <div class="layer domain">
+        <div class="name">Domain</div>
+        <div class="row"><div class="box protocol">«ProvisioningStatusEvaluating»</div></div>
+        <div class="arrow">↑ implemented by</div>
+        <div class="row"><div class="box">ProvisioningStatusEvaluator</div></div>
+        <div class="arrow">↓ depends on</div>
+        <div class="row">
+            <div class="box protocol">«SecureElementPassProviding»</div>
+            <div class="box protocol">«RemotePassEligibilityChecking»</div>
+        </div>
+        <div class="arrow">Values passed between them</div>
+        <div class="row">
+            <div class="box">SecureElementPassRecord</div>
+            <div class="box">ProvisioningAvailability</div>
+        </div>
+    </div>
+    <div class="arrow">↑ both Domain ports implemented by <code>PassKitPassRepository</code></div>
+
+    <div class="layer infra">
+        <div class="name">Infrastructure</div>
+        <div class="row">
+            <div class="box">PassKitPassRepository</div>
+            <div class="box">PassKitStatusMapper</div>
+        </div>
+        <div class="arrow">↓ <code>PassKitPassRepository</code> depends on</div>
+        <div class="row">
+            <div class="box protocol">«PassLibrary»</div>
+            <div class="arrow">→ returns →</div>
+            <div class="box protocol">«SecureElementPassDescribing»</div>
+        </div>
+    </div>
+    <div class="arrow">↑ adopted by</div>
+
+    <div class="layer passkit">
+        <div class="name">PassKit (Apple)</div>
+        <div class="row">
+            <div class="box">PKPassLibrary</div>
+            <div class="box">PKSecureElementPass</div>
+        </div>
+    </div>
+
+    <div class="legend">Dashed italic boxes are protocols. Solid boxes are concrete types.</div>
+</div>
+
+<h3>Domain</h3>
+<p>Pure Swift, no <code>import PassKit</code>. Holds the rule from the brief and can be tested without Wallet.</p>
+<table>
+    <tr><th>Type</th><th>Kind</th><th>Role</th></tr>
+    <tr><td><code>SecureElementPassRecord</code></td><td>Entity</td><td>A pass already in Wallet: identifier, suffix, and whether it is deactivated</td></tr>
+    <tr><td><code>ProvisioningAvailability</code></td><td>Entity</td><td>The answer: available on device, available on Watch, requires authentication</td></tr>
+    <tr><td><code>SecureElementPassProviding</code></td><td>Port</td><td>Where passes come from</td></tr>
+    <tr><td><code>RemotePassEligibilityChecking</code></td><td>Port</td><td>Whether a pass can still go to the Watch</td></tr>
+    <tr><td><code>ProvisioningStatusEvaluating</code></td><td>Port</td><td>The use case seen from the Public layer</td></tr>
+    <tr><td><code>ProvisioningStatusEvaluator</code></td><td>Use case</td><td>Compares <code>lastDigits</code> with the passes in Wallet</td></tr>
+</table>
+
+<h3>Infrastructure</h3>
+<p>Adapters between the Domain and PassKit. The only layer that knows about Apple types.</p>
+<table>
+    <tr><th>Type</th><th>Role</th></tr>
+    <tr><td><code>PassKitPassRepository</code></td><td>Implements both Domain ports on top of <code>PassLibrary</code></td></tr>
+    <tr><td><code>PassKitStatusMapper</code></td><td>Turns <code>ProvisioningAvailability</code> into <code>PKIssuerProvisioningExtensionStatus</code></td></tr>
+    <tr><td><code>PassLibrary</code></td><td>The two <code>PKPassLibrary</code> calls the framework makes, adopted by <code>PKPassLibrary</code></td></tr>
+    <tr><td><code>SecureElementPassDescribing</code></td><td>The three <code>PKSecureElementPass</code> properties the framework reads, adopted by <code>PKSecureElementPass</code></td></tr>
+</table>
+
+<h3>Public</h3>
+<table>
+    <tr><th>Type</th><th>Role</th></tr>
+    <tr><td><code>IssuerProvisioningStatusProvider</code></td><td>The only public type. Composition root: wires the real PassKit adapters into the evaluator and exposes <code>status(completion:)</code></td></tr>
+</table>
+<p>
+    The public surface is one convenience initializer and one method.
+    Everything else is <code>internal</code>, so it can change without breaking issuers.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="process">2. Process View</h2>
+
+<p>One call from Wallet runs entirely on the caller's thread and finishes before <code>status</code> returns.</p>
+
+<div class="diagram flow">
+    <div class="step"><span class="num">1</span><span class="who">Wallet → extension</span><span><code>status(completion:)</code></span></div>
+    <div class="arrow">↓</div>
+    <div class="step"><span class="num">2</span><span class="who">extension → Provider</span><span><code>status(completion:)</code></span></div>
+    <div class="arrow">↓</div>
+    <div class="step"><span class="num">3</span><span class="who">Provider → Evaluator</span><span><code>evaluate(lastDigits:requiresAuthentication:)</code></span></div>
+    <div class="arrow">↓</div>
+    <div class="step"><span class="num">4</span><span class="who">Evaluator</span><span>Drop empty and duplicate <code>lastDigits</code>. Return early if none are left.</span></div>
+    <div class="arrow">↓</div>
+    <div class="step"><span class="num">5</span><span class="who">Evaluator → Repository → PassKit</span><span><code>PKPassLibrary.passes(of: .secureElement)</code>, converted to <code>SecureElementPassRecord</code></span></div>
+    <div class="arrow">↓</div>
+    <div class="step"><span class="num">6</span><span class="who">Evaluator</span><span>Index active passes by suffix. Deactivated passes are dropped.</span></div>
+    <div class="arrow">↓</div>
+    <div class="loop">
+        <div class="name">7. For each <code>lastDigits</code> entry, until both answers are <code>true</code></div>
+        <div class="step"><span class="num">7a</span><span class="who">Evaluator</span><span>Suffix not found: <code>passEntriesAvailable = true</code></span></div>
+        <div class="arrow">or</div>
+        <div class="step"><span class="num">7b</span><span class="who">Evaluator → Repository → PassKit</span><span>Suffix found: <code>canAddSecureElementPass(primaryAccountIdentifier:)</code>, skipped once the Watch answer is <code>true</code></span></div>
+    </div>
+    <div class="arrow">↓</div>
+    <div class="step"><span class="num">8</span><span class="who">Evaluator → Provider</span><span><code>ProvisioningAvailability</code>, mapped by <code>PassKitStatusMapper</code></span></div>
+    <div class="arrow">↓</div>
+    <div class="step"><span class="num">9</span><span class="who">Provider → Wallet</span><span><code>completion(PKIssuerProvisioningExtensionStatus)</code>, before <code>status</code> returns</span></div>
+</div>
+
+<h3>Timing</h3>
+<p>Wallet ignores an answer that takes more than 100 ms.</p>
+<ul>
+    <li><strong>Synchronous.</strong> <code>completion</code> is called before <code>status</code> returns. There is no thread hop and no queue to wait for.</li>
+    <li><strong>Wallet is read once</strong> per call and indexed by suffix: O(n + m) time for n passes and m <code>lastDigits</code>, instead of O(n × m).</li>
+    <li><strong>PassKit calls are the real cost.</strong> Each one is an XPC round trip to the system Wallet service, far slower than the Swift around it. The evaluator therefore:
+        <ul>
+            <li>skips empty and duplicate <code>lastDigits</code>,</li>
+            <li>stops asking about the Watch once one card is addable there,</li>
+            <li>stops looping once both answers are <code>true</code>,</li>
+            <li>does not read Wallet at all when <code>lastDigits</code> is empty.</li>
+        </ul>
+    </li>
+</ul>
+
+<h3>Concurrency</h3>
+<p>
+    <code>IssuerProvisioningStatusProvider</code> only holds constants, so concurrent calls do not share mutable state.
+    A test calls <code>status</code> from 100 threads at once.
+</p>
+
+<h3>State</h3>
+<p>Nothing is cached between calls. Each call reads Wallet again, so a card the user just added is taken into account.</p>
+
+<!-- ============================================================ -->
+<h2 id="development">3. Development View</h2>
+
+<h3>Source layout</h3>
+<pre><code>IssuerProvisioningKit/
+├── Domain/
+│   ├── Entities/          SecureElementPassRecord, ProvisioningAvailability
+│   ├── Ports/             SecureElementPassProviding, RemotePassEligibilityChecking,
+│   │                      ProvisioningStatusEvaluating
+│   └── UseCases/          ProvisioningStatusEvaluator
+├── Infrastructure/        PassKitPassRepository, PassKitStatusMapper,
+│                          PassLibrary, SecureElementPassDescribing
+└── Public/                IssuerProvisioningStatusProvider
+
+IssuerProvisioningKitTests/
+├── Domain/                ProvisioningStatusEvaluatorTests
+├── Infrastructure/        PassKitPassRepositoryTests, PassKitStatusMapperTests
+├── Public/                IssuerProvisioningStatusProviderTests,
+│                          IssuerProvisioningStatusPerformanceTests
+└── TestDoubles/           Spies, stubs and fixtures
+
+scripts/
+└── build-xcframework.sh</code></pre>
+<p>The test folders mirror the source folders, so the test for a type is always in the same place.</p>
+
+<h3>Dependency injection</h3>
+<p>
+    Constructor injection only, no container.
+    <code>IssuerProvisioningStatusProvider</code> builds the real graph in its public initializer.
+    An <code>internal</code> initializer takes any <code>ProvisioningStatusEvaluating</code>, which is how tests replace it.
+</p>
+
+<h3>Tests</h3>
+<table>
+    <tr><th>Framework</th><th>Used for</th><th>Why</th></tr>
+    <tr><td>Swift Testing</td><td>Logic: 53 cases</td><td>Parameterized tests keep each scenario readable</td></tr>
+    <tr><td>XCTest</td><td>Timing: 4 cases</td><td><code>XCTWaiter</code> and <code>measure</code> have no Swift Testing equivalent</td></tr>
+</table>
+<table>
+    <tr><th>Suite</th><th>What it covers</th></tr>
+    <tr><td><code>ProvisioningStatusEvaluatorTests</code></td><td>The rule from the brief, 16 scenarios, plus how often PassKit is asked</td></tr>
+    <tr><td><code>PassKitPassRepositoryTests</code></td><td>Every <code>passActivationState</code>, field copying, the Watch call</td></tr>
+    <tr><td><code>PassKitStatusMapperTests</code></td><td>All 8 combinations of the three flags</td></tr>
+    <tr><td><code>IssuerProvisioningStatusProviderTests</code></td><td>Completion called once and synchronously, real <code>PKPassLibrary</code>, concurrent calls</td></tr>
+    <tr><td><code>IssuerProvisioningStatusPerformanceTests</code></td><td>100 ms with 20 passes and with 10,000 passes; a slow stub proves the check can fail</td></tr>
+</table>
+<p>
+    Test doubles are hand-written: spies record calls, stubs return fixed data.
+    <code>PassLibrarySpy</code> and <code>SecureElementPassStub</code> stand in for <code>PKPassLibrary</code> and <code>PKSecureElementPass</code>,
+    which cannot be created with a chosen state in tests.
+</p>
+<p>
+    Line coverage of the framework is 99.2%.
+    The only line not covered is the <code>\.secureElementPass</code> key path in <code>PassLibrary.swift</code>,
+    which runs only when the real Wallet holds a card, so only on a device.
+</p>
+
+<h3>Build</h3>
+<p>
+    The shared scheme <code>IssuerProvisioningKit</code> runs the tests with coverage limited to the framework target.
+    <code>scripts/build-xcframework.sh</code> produces the binary for distribution; build products are never committed.
+</p>
+
+<!-- ============================================================ -->
+<h2 id="physical">4. Physical View</h2>
+
+<h3>Distribution</h3>
+<div class="diagram">
+    <div class="container">
+        <div class="name">IssuerProvisioningKit.xcframework</div>
+        <div class="row">
+            <div class="box">ios-arm64<br><span class="muted">iPhone and iPad</span></div>
+            <div class="box">ios-arm64_x86_64-simulator<br><span class="muted">Simulator, Apple silicon and Intel Macs</span></div>
+        </div>
+    </div>
+</div>
+
+<h3>Runtime</h3>
+<div class="diagram">
+    <div class="device">
+        <div class="name">iPhone</div>
+        <div class="row"><div class="box">Wallet app</div></div>
+        <div class="arrow">↓ <code>status(completion:)</code></div>
+        <div class="container">
+            <div class="name">Issuer app</div>
+            <div class="container">
+                <div class="name">Issuer Provisioning extension</div>
+                <div class="row"><div class="box">IssuerProvisioningKit.framework</div></div>
+            </div>
+        </div>
+        <div class="arrow">↓ XPC</div>
+        <div class="row"><div class="box">System Wallet service</div></div>
+    </div>
+    <div class="arrow">↕ paired device</div>
+    <div class="row"><div class="box">Apple Watch</div></div>
+</div>
+
+<ul>
+    <li><strong>Binary.</strong> One XCFramework with a device slice and a Simulator slice. Built with library evolution, so it ships a <code>.swiftinterface</code> and keeps working with newer Swift compilers. dSYMs are bundled for crash symbolication.</li>
+    <li><strong>Host.</strong> The framework is embedded in the issuer app and runs inside its non-UI Wallet extension on the iPhone.</li>
+    <li><strong>Apple Watch.</strong> No code runs on the Watch. Its passes are reached through PassKit on the paired iPhone, so no watchOS slice is needed.</li>
+    <li><strong>Access.</strong> <code>PKPassLibrary</code> only returns passes issued for the app. This requires the <code>com.apple.developer.payment-pass-provisioning</code> entitlement and the app and extension IDs in each pass's <code>associatedApplicationIdentifiers</code>.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="scenarios">5. Scenarios (+1)</h2>
+
+<p>Each scenario shows how the views above work together. <code>lastDigits</code> is what the issuer passes in.</p>
+<table>
+    <tr><th>#</th><th>Wallet</th><th><code>lastDigits</code></th><th>Device</th><th>Watch</th><th>Path through the code</th></tr>
+    <tr><td>1</td><td>Empty</td><td><code>["1234"]</code></td><td><code>true</code></td><td><code>false</code></td><td>Suffix not found, Watch never asked</td></tr>
+    <tr><td>2</td><td><code>1234</code>, active</td><td><code>["1234"]</code></td><td><code>false</code></td><td><code>true</code></td><td>Suffix found, <code>canAddSecureElementPass</code> returns <code>true</code></td></tr>
+    <tr><td>3</td><td><code>1234</code>, active, already on Watch</td><td><code>["1234"]</code></td><td><code>false</code></td><td><code>false</code></td><td>Suffix found, <code>canAddSecureElementPass</code> returns <code>false</code></td></tr>
+    <tr><td>4</td><td><code>1234</code>, deactivated</td><td><code>["1234"]</code></td><td><code>true</code></td><td><code>false</code></td><td>Pass dropped before indexing, so the card counts as absent</td></tr>
+    <tr><td>5</td><td><code>1234</code> old deactivated + <code>1234</code> new active</td><td><code>["1234"]</code></td><td><code>false</code></td><td>depends on new pass</td><td>Only the active pass is indexed and sent to the Watch check</td></tr>
+    <tr><td>6</td><td><code>1111</code> active, addable to Watch</td><td><code>["9999", "1111", "2222"]</code></td><td><code>true</code></td><td><code>true</code></td><td>Both answers are <code>true</code> after <code>1111</code>, so <code>2222</code> is never looked at</td></tr>
+    <tr><td>7</td><td>Anything</td><td><code>[]</code> or <code>[""]</code></td><td><code>false</code></td><td><code>false</code></td><td>Returns before reading Wallet</td></tr>
+</table>
+<p><code>requiresAuthentication</code> is never computed. The issuer sets it and it is passed through unchanged.</p>
+
+</body>
+</html>
