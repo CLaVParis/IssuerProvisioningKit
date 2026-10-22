@@ -52,10 +52,32 @@ struct ProvisioningStatusEvaluatorTests {
             expectedOnWatch: false
         ),
         Scenario(
+            testDescription: "Every card on device and already on Watch",
+            passes: [
+                .fixture(id: "id-A", suffix: "1111"),
+                .fixture(id: "id-B", suffix: "2222")
+            ],
+            watchEligibleIdentifiers: [],
+            lastDigits: ["1111", "2222"],
+            expectedOnDevice: false,
+            expectedOnWatch: false
+        ),
+        Scenario(
             testDescription: "Deactivated pass counts as absent",
             passes: [.fixture(id: "id-A", suffix: "1234", isDeactivated: true)],
             watchEligibleIdentifiers: ["id-A"],
             lastDigits: ["1234"],
+            expectedOnDevice: true,
+            expectedOnWatch: false
+        ),
+        Scenario(
+            testDescription: "Every card deactivated: all can be added to the device",
+            passes: [
+                .fixture(id: "id-A", suffix: "1111", isDeactivated: true),
+                .fixture(id: "id-B", suffix: "2222", isDeactivated: true)
+            ],
+            watchEligibleIdentifiers: ["id-A", "id-B"],
+            lastDigits: ["1111", "2222"],
             expectedOnDevice: true,
             expectedOnWatch: false
         ),

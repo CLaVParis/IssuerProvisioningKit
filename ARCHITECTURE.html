@@ -262,15 +262,15 @@ scripts/
 <h3>Tests</h3>
 <table>
     <tr><th>Framework</th><th>Used for</th><th>Why</th></tr>
-    <tr><td>Swift Testing</td><td>Logic: 56 cases</td><td>Parameterized tests keep each scenario readable</td></tr>
+    <tr><td>Swift Testing</td><td>Logic: 63 cases</td><td>Parameterized tests keep each scenario readable</td></tr>
     <tr><td>XCTest</td><td>Timing: 4 cases</td><td><code>XCTWaiter</code> and <code>measure</code> have no Swift Testing equivalent</td></tr>
 </table>
 <table>
     <tr><th>Suite</th><th>Cases</th><th>What it covers</th></tr>
-    <tr><td><code>ProvisioningStatusEvaluatorTests</code></td><td>27</td><td>The rule from the brief, 16 scenarios, plus how often PassKit is asked</td></tr>
+    <tr><td><code>ProvisioningStatusEvaluatorTests</code></td><td>29</td><td>The rule from the brief, 18 scenarios, plus how often PassKit is asked</td></tr>
     <tr><td><code>PassKitPassRepositoryTests</code></td><td>11</td><td>Every <code>passActivationState</code>, field copying, the Watch call</td></tr>
     <tr><td><code>PassKitStatusMapperTests</code></td><td>8</td><td>All 8 combinations of the three flags</td></tr>
-    <tr><td><code>IssuerProvisioningStatusProviderTests</code></td><td>7</td><td>Completion called once and synchronously, real <code>PKPassLibrary</code>, concurrent calls</td></tr>
+    <tr><td><code>IssuerProvisioningStatusProviderTests</code></td><td>12</td><td>Completion called once and synchronously, every pass state from PassKit to the Wallet status, real <code>PKPassLibrary</code>, concurrent calls</td></tr>
     <tr><td><code>PublicAPITests</code></td><td>3</td><td>The framework used as an issuer would, without <code>@testable</code>; stops compiling if a needed symbol is no longer public</td></tr>
     <tr><td><code>IssuerProvisioningStatusPerformanceTests</code></td><td>4</td><td>100 ms with 20 passes and with 10,000 passes; a slow stub proves the check can fail</td></tr>
 </table>

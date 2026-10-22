@@ -68,6 +68,28 @@ struct IssuerProvisioningStatusProviderTests {
         #expect(received?.requiresAuthentication == false)
     }
 
+    /// From the PassKit state to the Wallet status: only a deactivated pass lets the card be added again.
+    @Test(arguments: [
+        (PKSecureElementPass.PassActivationState.activated, false),
+        (.requiresActivation, false),
+        (.activating, false),
+        (.suspended, false),
+        (.deactivated, true)
+    ])
+    func passStateDecidesIfCardCanBeAdded(_ state: PKSecureElementPass.PassActivationState, canBeAdded: Bool) {
+        let library = PassLibrarySpy(passes: [SecureElementPassStub(id: "id-A", suffix: "1234", state: state)])
+        let repository = PassKitPassRepository(library: library)
+        let sut = makeSUT(evaluator: ProvisioningStatusEvaluator(
+            passProvider: repository,
+            remoteEligibilityChecker: repository
+        ))
+        var received: PKIssuerProvisioningExtensionStatus?
+
+        sut.status { received = $0 }
+
+        #expect(received?.passEntriesAvailable == canBeAdded)
+    }
+
     /// The only test that goes through the real `PKPassLibrary`.
     /// Wallet content depends on the machine, so only the call itself is checked.
     @Test func answersWithRealPassLibrary() async {
