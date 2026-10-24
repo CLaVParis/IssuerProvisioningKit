@@ -10,6 +10,7 @@ import Testing
 @Suite("PassKitPassRepository")
 struct PassKitPassRepositoryTests {
 
+    /// The one state the brief treats as absent.
     @Test func deactivatedPassIsMarkedDeactivated() {
         let sut = makeSUT(passes: [SecureElementPassStub(id: "id-A", suffix: "1234", state: .deactivated)])
 
@@ -29,6 +30,7 @@ struct PassKitPassRepositoryTests {
         #expect(sut.secureElementPasses().first?.isDeactivated == false)
     }
 
+    /// Identifier and suffix are copied as is, not swapped or changed.
     @Test func copiesIdentifierAndSuffix() {
         let sut = makeSUT(passes: [SecureElementPassStub(id: "id-A", suffix: "1234")])
 
@@ -41,6 +43,7 @@ struct PassKitPassRepositoryTests {
         ])
     }
 
+    /// No pass is dropped and the order is kept.
     @Test func keepsEveryPassInOrder() {
         let sut = makeSUT(passes: [
             SecureElementPassStub(id: "id-A", suffix: "1111"),
@@ -51,12 +54,14 @@ struct PassKitPassRepositoryTests {
         #expect(sut.secureElementPasses().map(\.primaryAccountIdentifier) == ["id-A", "id-B", "id-C"])
     }
 
+    /// An empty Wallet gives an empty list.
     @Test func emptyWalletGivesNoRecord() {
         let sut = makeSUT(passes: [])
 
         #expect(sut.secureElementPasses().isEmpty)
     }
 
+    /// PassKit receives the identifier the Watch check was given.
     @Test func watchCheckSendsPassIdentifier() {
         let library = PassLibrarySpy()
         let sut = PassKitPassRepository(library: library)
@@ -66,6 +71,7 @@ struct PassKitPassRepositoryTests {
         #expect(library.requestedIdentifiers == ["id-A"])
     }
 
+    /// PassKit's answer is returned unchanged.
     @Test(arguments: [true, false])
     func watchCheckReturnsLibraryAnswer(_ canAddToWatch: Bool) {
         let sut = PassKitPassRepository(library: PassLibrarySpy(canAddToWatch: canAddToWatch))

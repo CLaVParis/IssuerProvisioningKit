@@ -10,6 +10,7 @@ import Testing
 @Suite("IssuerProvisioningStatusProvider")
 struct IssuerProvisioningStatusProviderTests {
 
+    /// Wallet expects one answer: none would time out, two would be a bug.
     @Test func callsCompletionExactlyOnce() async {
         let sut = makeSUT(evaluator: ProvisioningStatusEvaluatorSpy(result: .noCardAvailable))
 
@@ -18,6 +19,7 @@ struct IssuerProvisioningStatusProviderTests {
         }
     }
 
+    /// The answer is given synchronously, with no thread hop that would cost time.
     @Test func callsCompletionBeforeReturning() {
         let sut = makeSUT(evaluator: ProvisioningStatusEvaluatorSpy(result: .noCardAvailable))
         var didComplete = false
@@ -27,6 +29,7 @@ struct IssuerProvisioningStatusProviderTests {
         #expect(didComplete)
     }
 
+    /// The issuer's lastDigits and requiresAuthentication reach the evaluator unchanged.
     @Test func forwardsIssuerInputToEvaluator() {
         let evaluator = ProvisioningStatusEvaluatorSpy(result: .noCardAvailable)
         let sut = makeSUT(lastDigits: ["1111", "2222"], requiresAuthentication: true, evaluator: evaluator)
@@ -37,6 +40,7 @@ struct IssuerProvisioningStatusProviderTests {
         #expect(evaluator.receivedRequiresAuthentication == [true])
     }
 
+    /// The evaluator's result reaches Wallet. The flags differ, so a swap would show.
     @Test func reportsEvaluatorResultToWallet() {
         let result = ProvisioningAvailability(
             passEntriesAvailable: true,
@@ -53,6 +57,7 @@ struct IssuerProvisioningStatusProviderTests {
         #expect(received?.requiresAuthentication == true)
     }
 
+    /// Real evaluator and mapper together: one card missing, one addable to the Watch.
     @Test func combinesRealEvaluatorAndMapper() {
         let evaluator = ProvisioningStatusEvaluator(
             passProvider: SecureElementPassProviderSpy(passes: [.fixture(id: "id-A", suffix: "1111")]),
@@ -103,7 +108,7 @@ struct IssuerProvisioningStatusProviderTests {
         }
     }
 
-    /// Wallet may ask from several threads at once.
+    /// Wallet may ask from several threads at once, and every call must be answered.
     @Test func answersConcurrentCalls() async {
         // Every stored property is a constant, so sharing it across threads is safe.
         nonisolated(unsafe) let sut = IssuerProvisioningStatusProvider(lastDigits: ["1234"], requiresAuthentication: false)

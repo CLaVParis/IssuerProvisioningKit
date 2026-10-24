@@ -9,6 +9,7 @@ import Testing
 @Suite("ProvisioningStatusEvaluator")
 struct ProvisioningStatusEvaluatorTests {
 
+    /// One row of the table: Wallet content, PassKit's Watch answers, the issuer's input and the expected status.
     struct Scenario: Sendable, CustomTestStringConvertible {
         let testDescription: String
         let passes: [SecureElementPassRecord]
@@ -184,6 +185,7 @@ struct ProvisioningStatusEvaluatorTests {
         )
     ]
 
+    /// Runs every scenario above against the rule from the brief.
     @Test(arguments: scenarios)
     func availability(_ scenario: Scenario) {
         let (sut, _, _) = makeSUT(
@@ -200,6 +202,7 @@ struct ProvisioningStatusEvaluatorTests {
         ))
     }
 
+    /// The issuer's value comes out unchanged and plays no part in matching.
     @Test(arguments: [true, false])
     func requiresAuthenticationIsPassedThrough(_ requiresAuthentication: Bool) {
         let (sut, _, _) = makeSUT(passes: [], watchEligibleIdentifiers: [])
@@ -211,6 +214,7 @@ struct ProvisioningStatusEvaluatorTests {
         #expect(!result.remotePassEntriesAvailable)
     }
 
+    /// The Watch is asked with the identifier of the matched pass, not its suffix or another pass.
     @Test func watchCheckUsesIdentifierOfMatchedPass() {
         let violet = SecureElementPassRecord.fixture(id: "id-violet", suffix: "4242")
         let (sut, _, watchChecker) = makeSUT(
@@ -223,6 +227,7 @@ struct ProvisioningStatusEvaluatorTests {
         #expect(watchChecker.requestedIdentifiers == [violet.primaryAccountIdentifier])
     }
 
+    /// Cards missing from the device or deactivated are never checked for the Watch.
     @Test func watchIsNotAskedAboutCardsAbsentFromDevice() {
         let (sut, _, watchChecker) = makeSUT(
             passes: [.fixture(id: "id-A", suffix: "2222", isDeactivated: true)],
@@ -234,6 +239,7 @@ struct ProvisioningStatusEvaluatorTests {
         #expect(watchChecker.requestedIdentifiers.isEmpty)
     }
 
+    /// Once one card can go to the Watch, the other cards are not checked.
     @Test func watchIsNotAskedAgainOnceAnswerIsKnown() {
         let (sut, _, watchChecker) = makeSUT(
             passes: [.fixture(id: "id-A", suffix: "1111"), .fixture(id: "id-B", suffix: "2222")],
@@ -245,6 +251,7 @@ struct ProvisioningStatusEvaluatorTests {
         #expect(watchChecker.requestedIdentifiers == ["id-A"])
     }
 
+    /// Wallet is read once per call, not once per card.
     @Test func passesAreReadOnce() {
         let (sut, passProvider, _) = makeSUT(
             passes: [.fixture(id: "id-A", suffix: "1111")],
@@ -256,6 +263,7 @@ struct ProvisioningStatusEvaluatorTests {
         #expect(passProvider.callCount == 1)
     }
 
+    /// No card to compare, so Wallet is not read at all.
     @Test func walletIsNotReadWithoutLastDigits() {
         let (sut, passProvider, _) = makeSUT(
             passes: [.fixture(id: "id-A", suffix: "1234")],
@@ -267,6 +275,7 @@ struct ProvisioningStatusEvaluatorTests {
         #expect(passProvider.callCount == 0)
     }
 
+    /// A card listed twice is checked for the Watch once.
     @Test func duplicateLastDigitsAreCheckedOnce() {
         let (sut, _, watchChecker) = makeSUT(
             passes: [.fixture(id: "id-A", suffix: "1234")],
@@ -292,6 +301,7 @@ struct ProvisioningStatusEvaluatorTests {
         #expect(result.remotePassEntriesAvailable)
     }
 
+    /// A card added between two calls shows up in the second answer, so nothing is cached.
     @Test func walletIsReadAgainOnEveryCall() {
         let (sut, passProvider, _) = makeSUT(passes: [], watchEligibleIdentifiers: [])
         let before = sut.evaluate(lastDigits: ["1234"], requiresAuthentication: false)

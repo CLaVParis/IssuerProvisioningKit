@@ -11,6 +11,7 @@ final class IssuerProvisioningStatusPerformanceTests: XCTestCase {
 
     private let walletTimeout: TimeInterval = 0.1
 
+    /// A usual Wallet: 20 passes and 5 issuer cards.
     func test_status_completesWithin100ms_forTypicalWallet() {
         let sut = makeSUT(passCount: 20, lastDigitsCount: 5)
 
@@ -24,6 +25,7 @@ final class IssuerProvisioningStatusPerformanceTests: XCTestCase {
         XCTAssertEqual(waitForCompletion(of: sut, within: walletTimeout), .completed)
     }
 
+    /// Reports timing in Xcode only. No baseline is stored, since baselines are tied to one Mac.
     func test_status_performance_forWorstCaseWithTenThousandCards() {
         let sut = makeSUT(passCount: 10_000, lastDigitsCount: 10_000)
 
@@ -66,6 +68,8 @@ final class IssuerProvisioningStatusPerformanceTests: XCTestCase {
         return result
     }
 
+    /// Every lastDigits value matches a pass and no pass can go to the Watch,
+    /// so nothing ends the loop early.
     private func makeSUT(passCount: Int, lastDigitsCount: Int) -> IssuerProvisioningStatusProvider {
         let passes = (0..<passCount).map { SecureElementPassRecord.fixture(id: "id-\($0)", suffix: "\($0)") }
         let lastDigits = (0..<lastDigitsCount).map { "\($0 % max(passCount, 1))" }
