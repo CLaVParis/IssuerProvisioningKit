@@ -71,8 +71,10 @@ final class IssuerProvisioningStatusPerformanceTests: XCTestCase {
     /// Every lastDigits value matches a pass and no pass can go to the Watch,
     /// so nothing ends the loop early.
     private func makeSUT(passCount: Int, lastDigitsCount: Int) -> IssuerProvisioningStatusProvider {
-        let passes = (0..<passCount).map { SecureElementPassRecord.fixture(id: "id-\($0)", suffix: "\($0)") }
-        let lastDigits = (0..<lastDigitsCount).map { "\($0 % max(passCount, 1))" }
+        // Four digits, like a real suffix: 0 becomes "0000".
+        let suffix = { (index: Int) in String(format: "%04d", index) }
+        let passes = (0..<passCount).map { SecureElementPassRecord.fixture(id: "id-\($0)", suffix: suffix($0)) }
+        let lastDigits = (0..<lastDigitsCount).map { suffix($0 % max(passCount, 1)) }
         let evaluator = ProvisioningStatusEvaluator(
             passProvider: SecureElementPassProviderSpy(passes: passes),
             remoteEligibilityChecker: RemotePassEligibilityCheckerSpy(eligibleIdentifiers: [])
