@@ -232,7 +232,7 @@ The code follows Clean Architecture. Dependencies point inward, toward the Domai
 | `Infrastructure/` | PassKit adapters                   | PassKit |
 | `Public/`         | `IssuerProvisioningStatusProvider` | PassKit |
 
-The diagrams are in [`ARCHITECTURE.html`](ARCHITECTURE.html). GitHub shows its source, so download it and open it in a browser.
+The diagrams and the 4+1 views are in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 <details>
 <summary>Clean Architecture and SOLID in the code</summary>
